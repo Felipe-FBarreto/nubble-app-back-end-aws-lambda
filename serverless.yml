@@ -1,0 +1,86 @@
+
+service: nubble-app
+
+custom:
+  userPoolId: !Ref CognitoUserPool
+  userPoolClientId: !Ref CognitoUserPoolClient
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region,'us-east-1'}
+  environment:
+    USER_POOL_ID: ${self:custom.userPoolId}
+    USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
+
+
+plugins:
+  - serverless-plugin-typescript
+
+functions:
+  singUp:
+    handler: functions/auth.singUp
+    events: 
+      - http:
+          path: register
+          method:  post
+          cors: true
+  confirmEmail:
+    handler: functions/auth.confirmEmail
+    events:
+      - http:
+          path: confirmEmail
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-${self:provider.stage}-user-pool
+        AdminCreateUserConfig:
+           AllowAdminCreateUserOnly: false
+        UsernameAttributes:
+          - email
+        AutoVerifiedAttributes:
+          - email
+        EmailVerificationMessage: 'Seu codigo de verificação para o cadastro NubbleApp é: {####}'
+        EmailVerificationSubject: 'Codigo de verificação NubbleApp'
+        Policies:
+          PasswordPolicy:
+              MinimumLength: 8
+              RequireLowercase: true
+              RequireNumbers: true
+              RequireSymbols: true
+              RequireUppercase: true
+    CognitoUserPoolClient: 
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-${self:provider.stage}-user-pool-client
+        UserPoolId: !Ref CognitoUserPool
+        AllowedOAuthFlows:
+         - implicit
+        AllowedOAuthFlowsUserPoolClient: true
+        AllowedOAuthScopes:
+          - email
+          - openid
+        CallbackURLs:
+          - https://www.google.com
+        LogoutURLs:
+          - https://www.google.com
+        ExplicitAuthFlows:
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+        SupportedIdentityProviders: 
+          - COGNITO
+        ReadAttributes:
+          - email
+        WriteAttributes:
+          - email
+
+
+
