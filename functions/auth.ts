@@ -8,6 +8,8 @@ import {
 import { validateEnvs } from "../utils/validateEnvs";
 import { Register } from "../types/auth/UserRegister";
 import { emailRegex, passwordRegex } from "../contents/Regexes";
+import { IUser } from "../types/models/User";
+import { UserModel } from "../models/UserModel";
 
 export const singUp: Handler = async (
   event: APIGatewayEvent,
@@ -16,6 +18,7 @@ export const singUp: Handler = async (
     const { error, USER_POOL_ID, USER_POOL_CLIENT_ID } = validateEnvs([
       "USER_POOL_ID",
       "USER_POOL_CLIENT_ID",
+      "USER_TABLE",
     ]);
 
     if (error) {
@@ -29,7 +32,7 @@ export const singUp: Handler = async (
       );
     }
 
-    const { email, password } = JSON.parse(event.body) as Register;
+    const { email, password, name } = JSON.parse(event.body) as Register;
 
     if (!email || !email.match(emailRegex)) {
       return standardResponseFormat(400, "Email inválido");
@@ -37,10 +40,20 @@ export const singUp: Handler = async (
     if (!password || !password.match(passwordRegex)) {
       return standardResponseFormat(400, "Senha inválido");
     }
-    await new CognitoServices(USER_POOL_ID, USER_POOL_CLIENT_ID).singUp(
-      email,
-      password,
-    );
+    if (!name || name.length < 2) {
+      return standardResponseFormat(400, "Nome inválido");
+    }
+
+    const cognitoUser = await new CognitoServices(
+      USER_POOL_ID,
+      USER_POOL_CLIENT_ID,
+    ).singUp(email, password);
+    const user = {
+      name: email,
+      cognitoId: cognitoUser.userSub,
+    } as IUser;
+
+    await UserModel.create(user);
     return standardResponseFormat(200, "Usuário cadastrado com sucesso");
   } catch (err) {
     console.log(err);

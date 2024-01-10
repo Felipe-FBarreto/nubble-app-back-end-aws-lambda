@@ -4,6 +4,7 @@ service: nubble-app
 custom:
   userPoolId: !Ref CognitoUserPool
   userPoolClientId: !Ref CognitoUserPoolClient
+  userTableName: 'user-table-${self:service}-${self:provider.stage}'
 
 frameworkVersion: "3"
 
@@ -15,6 +16,16 @@ provider:
   environment:
     USER_POOL_ID: ${self:custom.userPoolId}
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
+    USER_TABLE: ${self:custom.userTableName}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:*
+          Resource:
+          - "*"
+
 
 
 plugins:
