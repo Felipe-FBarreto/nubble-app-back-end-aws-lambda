@@ -5,6 +5,10 @@ custom:
   userPoolId: !Ref CognitoUserPool
   userPoolClientId: !Ref CognitoUserPoolClient
   userTableName: 'user-table-${self:service}-${self:provider.stage}'
+  avatarBucket: '${self:service}-${self:provider.stage}-avatar-bucket-nubble'
+  apigwBinary:
+    types:
+      - 'multipart/form-data'
 
 frameworkVersion: "3"
 
@@ -17,19 +21,24 @@ provider:
     USER_POOL_ID: ${self:custom.userPoolId}
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
     USER_TABLE: ${self:custom.userTableName}
+    AVATAR_BUCKET: ${self:custom.avatarBucket}
+
   iam:
     role:
       statements:
         - Effect: Allow
           Action:
             - dynamodb:*
+            - s3:*
           Resource:
-          - "*"
+            - "*"
 
 
 
 plugins:
   - serverless-plugin-typescript
+  - serverless-apigw-binary
+
 
 functions:
   singUp:
@@ -44,6 +53,20 @@ functions:
     events:
       - http:
           path: confirmEmail
+          method: post
+          cors: true
+  forgotPassword:
+    handler: functions/auth.forgotPassword
+    events:
+      - http:
+          path: forgotPassword
+          method: post
+          cors: true
+  confirmPassword:
+    handler: functions/auth.confirmPassword
+    events:
+      - http:
+          path: confirmPassword
           method: post
           cors: true
 
@@ -92,6 +115,28 @@ resources:
           - email
         WriteAttributes:
           - email
-
+    AvatarBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.avatarBucket}
+        AccessControl: Private
+    AvatarBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref AvatarBucket
+        PolicyDocument:
+          Statement:
+            - Action:
+                - 's3:GetObject'
+                - 's3:PutObject'
+                - 's3:DeleteObject'
+              Effect: Allow
+              Resource: !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref AvatarBucket
+                  - /*
+              Principal: '*'
+              
 
 
