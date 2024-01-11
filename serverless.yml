@@ -69,6 +69,13 @@ functions:
           path: confirmPassword
           method: post
           cors: true
+  login:
+    handler: functions/auth.login
+    events:
+      - http:
+          path: login
+          method: post
+          cors: true
 
 resources:
   Resources:

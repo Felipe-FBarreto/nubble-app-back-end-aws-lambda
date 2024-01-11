@@ -20,6 +20,7 @@ import { IUser } from "../types/models/User";
 import { UserModel } from "../models/UserModel";
 import { parse } from "aws-multipart-parser";
 import { S3Services } from "../services/S2Services";
+import { ILogin } from "../types/auth/Login";
 
 export const singUp: Handler = async (
   event: APIGatewayEvent,
@@ -212,5 +213,47 @@ export const confirmPassword: Handler = async (
       500,
       "Não foi possível enviar email para recuperar a senha, por favor entrar em contato com os desenvolvedores",
     );
+  }
+};
+
+export const login: Handler = async (
+  event: APIGatewayEvent,
+): Promise<IStandardResponseFormat> => {
+  try {
+    const { USER_POOL_ID, USER_POOL_CLIENT_ID, error } = validateEnvs([
+      "USER_POOL_ID",
+      "USER_POOL_CLIENT_ID",
+    ]);
+    if (error) {
+      return standardResponseFormat(500, error);
+    }
+
+    if (!event.body) {
+      return standardResponseFormat(
+        500,
+        "Parâmetros de entrada não informados",
+      );
+    }
+    const request = JSON.parse(event.body) as ILogin;
+    const { login, password } = request;
+    if (!login || !login.match(emailRegex)) {
+      return standardResponseFormat(400, "Email inválido");
+    }
+    if (!password || !password.match(passwordRegex)) {
+      return standardResponseFormat(400, "Senha inválida");
+    }
+
+    if (!password || !login) {
+      return standardResponseFormat(400, "Informar login e senha");
+    }
+
+    const response = await new CognitoServices(
+      USER_POOL_ID,
+      USER_POOL_CLIENT_ID,
+    ).login(login, password);
+    return standardResponseFormat(200, undefined, response);
+  } catch (err) {
+    console.log("🚀 ~ err:", err);
+    return standardResponseFormat(500, "Erro ao fazer o login:" + err);
   }
 };
