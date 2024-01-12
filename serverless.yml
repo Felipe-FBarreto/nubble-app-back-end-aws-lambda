@@ -24,6 +24,8 @@ provider:
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
     USER_TABLE: ${self:custom.userTableName}
     AVATAR_BUCKET: ${self:custom.avatarBucket}
+    POST_BUCKET: ${self:custom.postBucket}
+    POST_TABLE: ${self:custom.postTableName}
   iam:
     role:
       statements:
@@ -108,6 +110,20 @@ functions:
     events:
       - httpApi:
           path: /updateUser
+          method: put
+          authorizer: serviceAuthorizer
+  post:
+    handler: src/functions/post.post
+    events:
+      - httpApi:
+          path: /post
+          method: post
+          authorizer: serviceAuthorizer
+  toggoleLike:
+    handler: src/functions/post.toggleLike
+    events:
+      - httpApi:
+          path: /like/{postId}
           method: put
           authorizer: serviceAuthorizer
 resources:
