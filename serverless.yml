@@ -6,6 +6,8 @@ custom:
   userPoolClientId: !Ref CognitoUserPoolClient
   userTableName: 'user-table-${self:service}-${self:provider.stage}'
   avatarBucket: '${self:service}-${self:provider.stage}-avatar-bucket-nubble'
+  postTableName: 'post-table-${self:service}-${self:provider.stage}'
+  postBucket: '${self:service}-${self:provider.stage}-post-bucket-nubble'
   apigwBinary:
     types:
       - 'multipart/form-data'
@@ -22,7 +24,6 @@ provider:
     USER_POOL_CLIENT_ID: ${self:custom.userPoolClientId}
     USER_TABLE: ${self:custom.userTableName}
     AVATAR_BUCKET: ${self:custom.avatarBucket}
-
   iam:
     role:
       statements:
@@ -32,8 +33,20 @@ provider:
             - s3:*
           Resource:
             - "*"
-
-
+  httpApi:
+    authorizers:
+      serviceAuthorizer:
+        identitySource: $request.header.Authorization
+        issuerUrl:
+          Fn::Join:
+          - ''
+          -
+            - 'https://cognito-idp.'
+            - ${self:provider.region}
+            - '.amazonaws.com/'
+            - Ref: CognitoUserPool
+        audience:
+          - Ref: CognitoUserPoolClient
 
 plugins:
   - serverless-plugin-typescript
@@ -42,41 +55,61 @@ plugins:
 
 functions:
   singUp:
-    handler: functions/auth.singUp
+    handler: src/functions/auth.singUp
     events: 
       - http:
           path: register
           method:  post
           cors: true
   confirmEmail:
-    handler: functions/auth.confirmEmail
+    handler: src/functions/auth.confirmEmail
     events:
       - http:
           path: confirmEmail
           method: post
           cors: true
   forgotPassword:
-    handler: functions/auth.forgotPassword
+    handler: src/functions/auth.forgotPassword
     events:
       - http:
           path: forgotPassword
           method: post
           cors: true
   confirmPassword:
-    handler: functions/auth.confirmPassword
+    handler: src/functions/auth.confirmPassword
     events:
       - http:
           path: confirmPassword
           method: post
           cors: true
   login:
-    handler: functions/auth.login
+    handler: src/functions/auth.login
     events:
       - http:
           path: login
           method: post
           cors: true
-
+  me:
+    handler: src/functions/user.me
+    events:
+      - httpApi:
+          path: /me
+          method: get
+          authorizer: serviceAuthorizer
+  deleteAvatar:
+    handler: src/functions/user.deleteAvatar
+    events:
+      - httpApi:
+          path: /delete
+          method: put
+          authorizer: serviceAuthorizer
+  updateUser:
+    handler: src/functions/user.update
+    events:
+      - httpApi:
+          path: /updateUser
+          method: put
+          authorizer: serviceAuthorizer
 resources:
   Resources:
     CognitoUserPool:
@@ -144,6 +177,25 @@ resources:
                   - !Ref AvatarBucket
                   - /*
               Principal: '*'
-              
-
-
+    PostBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.postBucket}
+        AccessControl: Private
+    PostBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref PostBucket
+        PolicyDocument:
+          Statement:
+            - Action:
+                - 's3:GetObject'
+                - 's3:PutObject'
+                - 's3:DeleteObject'
+              Effect: Allow
+              Resource: !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref PostBucket
+                  - /*
+              Principal: '*'

@@ -1,26 +1,26 @@
 import {
   IForgotPassword,
   IForgotPasswordEmail,
-} from "./../types/auth/ForgotPassword";
-import { IConfirmEmail } from "./../types/auth/ConfirmEmail";
-import { CognitoServices } from "./../services/CognitoSerices";
+} from "../../src/types/auth/ForgotPassword";
+import { IConfirmEmail } from "../../src/types/auth/ConfirmEmail";
+import { CognitoServices } from "../../src/services/CognitoSerices";
 import { Handler, APIGatewayEvent } from "aws-lambda";
 import {
   IStandardResponseFormat,
   standardResponseFormat,
-} from "../utils/standardResponseFormat";
-import { validateEnvs } from "../utils/validateEnvs";
-import { Register } from "../types/auth/UserRegister";
+} from "../../src/utils/standardResponseFormat";
+import { validateEnvs } from "../../src/utils/validateEnvs";
+import { Register } from "../../src/types/auth/UserRegister";
 import {
   emailRegex,
   imageAllowedExtensions,
   passwordRegex,
 } from "../contents/Regexes";
-import { IUser } from "../types/models/User";
-import { UserModel } from "../models/UserModel";
+import { IUser } from "../../src/types/models/User";
+import { UserModel } from "../../src/models/UserModel";
 import { parse } from "aws-multipart-parser";
-import { S3Services } from "../services/S2Services";
-import { ILogin } from "../types/auth/Login";
+import { S3Services } from "../../src/services/S2Services";
+import { ILogin } from "../../src/types/auth/Login";
 
 export const singUp: Handler = async (
   event: APIGatewayEvent,
