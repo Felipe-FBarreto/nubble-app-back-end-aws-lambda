@@ -1,3 +1,4 @@
+import { IComments } from "./../types/post/IComments";
 import { S3Services } from "./../services/S2Services";
 import { UserModel } from "./../models/UserModel";
 import { getUserIdFromEvent } from "./../utils/authenticateUse";
@@ -105,6 +106,60 @@ export const toggleLike = async (
     return standardResponseFormat(
       500,
       "Não foi possível curtir/ deixar de curtir essa publicação",
+    );
+  }
+};
+
+export const comments: Handler = async (
+  event: any,
+): Promise<IStandardResponseFormat> => {
+  try {
+    const { error } = validateEnvs(["POST_TABLE", "POST_BUCKET"]);
+
+    if (error) {
+      return standardResponseFormat(500, error);
+    }
+    const userId = getUserIdFromEvent(event);
+
+    const user = await UserModel.get({ cognitoId: userId });
+
+    if (!user) {
+      return standardResponseFormat(400, "Usuário não encontrado");
+    }
+    const { postId } = event.pathParameters;
+
+    if (!postId) {
+      console.log(postId);
+      return standardResponseFormat(400, "Paramentro da url inválido");
+    }
+
+    const post = await PostModel.get({ id: postId });
+    if (!post) {
+      return standardResponseFormat(400, "Publicação não encontrado");
+    }
+
+    if (!event.body) {
+      return standardResponseFormat(400, "Parâmetros de entrada necessário");
+    }
+    const { comments } = JSON.parse(event.body) as IComments;
+
+    if (!comments || comments.length < 3) {
+      return standardResponseFormat(400, "Comentário inválido");
+    }
+    const currentDate = new Date();
+    const comment = {
+      date: currentDate.toString(),
+      userId,
+      comments,
+    };
+    post.comments.push(comment);
+    await PostModel.update(post);
+    return standardResponseFormat(200, "Comentário adicionado com sucesso");
+  } catch (err) {
+    console.log(err);
+    return standardResponseFormat(
+      500,
+      "Não foi possível comentar está publicação",
     );
   }
 };

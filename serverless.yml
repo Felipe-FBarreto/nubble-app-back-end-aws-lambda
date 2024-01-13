@@ -126,6 +126,13 @@ functions:
           path: /like/{postId}
           method: put
           authorizer: serviceAuthorizer
+  comments:
+    handler: src/functions/post.comments
+    events:
+      - httpApi:
+          path: /comments/{postId}
+          method: put
+          authorizer: serviceAuthorizer
 resources:
   Resources:
     CognitoUserPool:
