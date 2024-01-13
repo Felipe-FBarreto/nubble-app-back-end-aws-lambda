@@ -163,3 +163,33 @@ export const comments: Handler = async (
     );
   }
 };
+
+export const get: Handler = async (
+  event: any,
+): Promise<IStandardResponseFormat> => {
+  try {
+    const { error, POST_BUCKET } = validateEnvs(["POST_BUCKET"]);
+
+    if (error) {
+      return standardResponseFormat(500, error);
+    }
+
+    const { postId } = event.pathParameters;
+
+    if (!postId) {
+      console.log(postId);
+      return standardResponseFormat(400, "Paramentro da url inválido");
+    }
+
+    const post = await PostModel.get({ id: postId });
+    if (!post) {
+      return standardResponseFormat(400, "Publicação não encontrado");
+    }
+
+    post.image = await new S3Services().getImageS3(POST_BUCKET, post.image);
+    return standardResponseFormat(200, undefined, post);
+  } catch (err) {
+    console.log(err);
+    return standardResponseFormat(500, "Não foi possível bucar publicação");
+  }
+};

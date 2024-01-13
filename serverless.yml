@@ -133,6 +133,13 @@ functions:
           path: /comments/{postId}
           method: put
           authorizer: serviceAuthorizer
+  getPost:
+    handler: src/functions/post.get
+    events:
+      - httpApi:
+          path: /getPost/{postId}
+          method: get
+          authorizer: serviceAuthorizer
 resources:
   Resources:
     CognitoUserPool:
