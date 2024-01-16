@@ -119,7 +119,7 @@ functions:
           path: /post
           method: post
           authorizer: serviceAuthorizer
-  toggoleLike:
+  toggleLike:
     handler: src/functions/post.toggleLike
     events:
       - httpApi:
@@ -140,6 +140,35 @@ functions:
           path: /getPost/{postId}
           method: get
           authorizer: serviceAuthorizer
+  searchUser:
+    handler: src/functions/user.searchUser
+    events:
+      - httpApi:
+          path: /user/search/{filter}
+          method: get
+          authorizer: serviceAuthorizer
+  toggleFollow:
+    handler: src/functions/user.follow
+    events:
+      - httpApi:
+          path: /user/follow/{followedUserId}
+          method: put
+          authorizer: serviceAuthorizer
+  feedByMy:
+    handler: src/functions/feed.findByUserId
+    events:
+      - httpApi:
+          path: /feed/user
+          method: get
+          authorizer: serviceAuthorizer
+  feedByUser:
+    handler: src/functions/feed.findByUserId
+    events:
+      - httpApi:
+          path: /feed/user/{userId}
+          method: get
+          authorizer: serviceAuthorizer
+
 resources:
   Resources:
     CognitoUserPool:

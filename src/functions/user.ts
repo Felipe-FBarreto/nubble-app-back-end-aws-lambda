@@ -1,4 +1,4 @@
-import { UserModel } from "../../src/models/UserModel";
+import { UserModel } from "../models/UserModel";
 import { getUserIdFromEvent } from "../../src/utils/authenticateUse";
 import { validateEnvs } from "../../src/utils/validateEnvs";
 import {
@@ -11,6 +11,7 @@ import { parse } from "aws-multipart-parser";
 import { IUserUpdated } from "../types/user/userUpdate";
 import { imageAllowedExtensions } from "../contents/Regexes";
 import { CognitoServices } from "../services/CognitoSerices";
+import { DefaultPaginatedListResponse } from "../types/user/DeafultListPaginatedResponse";
 
 export const me: Handler = async (
   event: APIGatewayEvent,
@@ -136,6 +137,112 @@ export const update: Handler = async (
     return standardResponseFormat(
       500,
       "Não foi possível alterar dados do usuário",
+    );
+  }
+};
+
+export const searchUser: Handler = async (
+  event: any,
+): Promise<IStandardResponseFormat> => {
+  try {
+    const { error, AVATAR_BUCKET } = validateEnvs([
+      "USER_TABLE",
+      "AVATAR_BUCKET",
+    ]);
+
+    if (error) {
+      return standardResponseFormat(500, error);
+    }
+
+    const { filter } = event.pathParameters;
+    const { lastKey } = event.queryStringParameters || "";
+
+    if (!filter || filter.length < 2) {
+      return standardResponseFormat(400, "Parâmetros de buscas inválidos");
+    }
+    const query = UserModel.scan()
+      .where("name")
+      .contains(filter)
+      .or()
+      .where("email")
+      .contains(filter);
+
+    if (lastKey) {
+      query.startAt({ cognitoId: lastKey });
+    }
+
+    const result = await query.limit(2).exec();
+
+    const response = {} as DefaultPaginatedListResponse;
+
+    if (result) {
+      response.lastKey = result.lastKey;
+      response.count = result.count;
+
+      for (const data of result) {
+        if (data && data.avatar) {
+          data.avatar = await new S3Services().getImageS3(
+            AVATAR_BUCKET,
+            data.avatar,
+          );
+        }
+      }
+      response.data = result;
+    }
+
+    return standardResponseFormat(200, undefined, response);
+  } catch (err) {
+    console.log(err);
+    return standardResponseFormat(500, "Não foi possível buscar usuário");
+  }
+};
+
+export const follow: Handler = async (
+  event: any,
+): Promise<IStandardResponseFormat> => {
+  try {
+    const { error } = validateEnvs(["USER_TABLE"]);
+    if (error) {
+      return standardResponseFormat(500, error);
+    }
+    const followerUserId = getUserIdFromEvent(event);
+    const followerUser = await UserModel.get({ cognitoId: followerUserId });
+    if (!followerUser) {
+      return standardResponseFormat(400, "Usuário não encontrado");
+    }
+
+    const { followedUserId } = event.pathParameters;
+
+    if (!followedUserId) {
+      return standardResponseFormat(400, "Parâmetro da url necessário");
+    }
+    const followedUser = await UserModel.get({ cognitoId: followedUserId });
+
+    if (followerUserId === followedUserId) {
+      return standardResponseFormat(400, "Não pode seguir você mesmo");
+    }
+    const hasIndex = followedUser.following.findIndex(
+      (fl) => fl.toString() === followerUserId,
+    );
+
+    if (hasIndex != -1) {
+      followedUser.following.splice(hasIndex, 1);
+      await UserModel.update(followedUser);
+      followerUser.followers -= 1;
+      await UserModel.update(followerUser);
+      return standardResponseFormat(200, "Você deixou de seguir este usuário");
+    } else {
+      followedUser.following.push(followerUserId);
+      await UserModel.update(followedUser);
+      followerUser.followers += 1;
+      await UserModel.update(followerUser);
+      return standardResponseFormat(200, "Você começou a seguir este usuário");
+    }
+  } catch (err) {
+    console.log(err);
+    return standardResponseFormat(
+      500,
+      "Não foi possível seguir ou deixar de seguir este usuário",
     );
   }
 };
