@@ -228,13 +228,13 @@ export const follow: Handler = async (
     if (hasIndex != -1) {
       followedUser.following.splice(hasIndex, 1);
       await UserModel.update(followedUser);
-      followerUser.followers -= 1;
+      followerUser.followers.splice(hasIndex, 1);
       await UserModel.update(followerUser);
       return standardResponseFormat(200, "Você deixou de seguir este usuário");
     } else {
       followedUser.following.push(followerUserId);
       await UserModel.update(followedUser);
-      followerUser.followers += 1;
+      followerUser.followers.push(followerUserId);
       await UserModel.update(followerUser);
       return standardResponseFormat(200, "Você começou a seguir este usuário");
     }

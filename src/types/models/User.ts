@@ -3,7 +3,7 @@ export type IUser = {
   name: string;
   email: string;
   avatar?: string;
-  followers: number;
+  followers: Array<string>;
   following: Array<string>;
   post: number;
 };

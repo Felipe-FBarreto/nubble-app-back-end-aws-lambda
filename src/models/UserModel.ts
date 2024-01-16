@@ -21,7 +21,7 @@ const UserSchema = new dynamoose.Schema(
       },
     },
     avatar: { type: String },
-    followers: { type: Number, default: 0 },
+    followers: { type: Array, default: [] },
     following: { type: Array, default: [] },
     post: { type: Number, default: 0 },
   },
